@@ -31,7 +31,7 @@ public:
 };
 
 
-template<class C, class P> class worker
+template<class C, class P> class worker_base
 {
 
 public:
@@ -73,16 +73,16 @@ public:
 
 public:
 
-    worker(std::size_t buffer_size = 5000,
-           std::size_t queue_length = 1000)
-           : buffer(buffer_size)
-           , buffer_size(buffer_size)
-           , queue_length(queue_length)
+    worker_base(std::size_t buffer_size = 5000,
+                std::size_t queue_length = 1000)
+                : buffer(buffer_size)
+                , buffer_size(buffer_size)
+                , queue_length(queue_length)
     {
         worker_thread = std::thread(&worker::start, this);
     }
 
-    virtual ~worker()
+    virtual ~worker_base()
     {
         stop();
     }
@@ -185,6 +185,20 @@ protected:
         return current_port;
     }
     
+    virtual void loop() = 0;
+};
+
+template<class C, class P> class worker : public worker_base<C, P>
+{
+
+    worker(std::size_t buffer_size = 5000,
+           std::size_t queue_length = 1000)
+           : worker_base(buffer_size, queue_length)
+    {
+    }
+
+protected:
+
     virtual void loop()
     {
         char packet_bytes[act_photo::packet_body_size];
