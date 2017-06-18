@@ -31,10 +31,21 @@ public:
 };
 
 
+/**
+ *	The class provides a basic functionality
+ *	for all the reactor objects, i.e. objects
+ *	which provide a buffered non-blocking IO
+ *	operations over com_port.
+ *	
+ *	This base class is a virtual class with
+ *	a single abstract function `loop` to override.
+ */
 template<class I, class O> class reactor_base
 {
 
+
 public:
+
 
     using ipacket_t = I;
     using opacket_t = O;
@@ -42,40 +53,97 @@ public:
     using mutex_t = std::mutex;
     using guard_t = std::lock_guard < mutex_t > ;
 
+
 protected:
+
 
     using ulock_t     = std::unique_lock < mutex_t > ;
     using condition_t = std::condition_variable;
 
+    /**
+     *	Background worker thread
+     */
     std::thread            reactor_thread;
-                           
+
+    /**
+     *	Mutex and condition variable for internal
+     *	usage only
+     */
     mutex_t                mutex;
     condition_t            cv;
 
+
     // guarded by `mutex`
+
+
+    /**
+     *	Indicates if this reactor is working
+     */
     bool                   working;
+
+    /**
+     *	The port obtained from external code (thread)
+     *	to be fetched and moved to `current_port`
+     */
     com_port               port;
     bool                   port_changed;
+
+    /**
+     *	Buffer sizes, packet queues, flags obtained
+     *	from external code (thread) to be moved to
+     *	worker thread local objects
+     */
     std::size_t            ibuffer_size;
     std::size_t            obuffer_size;
     std::vector<opacket_t> oqueue;
     bool                   use_iqueue;
 
+
     // thread-local
+
+
+    /**
+     *	The current port used as the data source and target
+     */
     com_port               current_port;
+
+    /**
+     *	The current buffers
+     */
     byte_buffer            ibuffer;
     byte_buffer            obuffer;
 
+
 public:
+
 
     mutex_t                iqueue_mutex;
 
+
     // guarded by `iqueue_mutex`
+
+
+    /**
+     *	The public packet queue
+     *	
+     *	Turning off `use_iqueue` variable
+     *	does not affect `iqueue_length` value
+     *	and `iqueue` capacity.
+     */
     std::size_t            iqueue_length;
     std::list<ipacket_t>   iqueue;
 
+
 public:
 
+
+    /**
+     *	Creates the new reactor and immediately starts
+     *	its working thread.
+     *	
+     *	Providing properly open port actually starts
+     *	the reactor.
+     */
     reactor_base(std::size_t ibuffer_size  = 5000,
                  std::size_t obuffer_size  = 5000,
                  std::size_t iqueue_length = 1000,
@@ -90,10 +158,15 @@ public:
         reactor_thread = std::thread(&reactor::start, this);
     }
 
+
+    /**
+     *	Stops the reactor.
+     */
     virtual ~reactor_base()
     {
         stop();
     }
+
 
     virtual void supply_port(com_port port)
     {
@@ -105,6 +178,7 @@ public:
         cv.notify_one();
     }
 
+
     virtual void supply_opacket(opacket_t packet)
     {
         {
@@ -112,6 +186,7 @@ public:
             oqueue.push_back(packet);
         }
     }
+
 
     virtual void supply_ibuffer_size(std::size_t buffer_size)
     {
@@ -121,6 +196,7 @@ public:
         }
     }
 
+
     virtual void supply_obuffer_size(std::size_t buffer_size)
     {
         {
@@ -128,6 +204,7 @@ public:
             this->obuffer_size = buffer_size;
         }
     }
+
 
     virtual void supply_use_iqueue(bool use)
     {
@@ -137,6 +214,7 @@ public:
         }
     }
 
+
     virtual void supply_iqueue_length(std::size_t queue_length)
     {
         {
@@ -145,6 +223,13 @@ public:
         }
     }
 
+
+    /**
+     *	Asynchronously stops the reactor by setting
+     *	`working` flag to `false`.
+     *	
+     *	Use `join` to await reactor termination.
+     */
     virtual void stop()
     {
         {
@@ -154,13 +239,27 @@ public:
         cv.notify_one();
     }
 
+
+    /**
+     *	Waits for this reactor termination.
+     */
     virtual void join()
     {
         reactor_thread.join();
     }
 
+
 protected:
 
+
+    /**
+     *	The method is invoked by the worker thread constructor.
+     *	
+     *	Invokes `loop` method.
+     *	
+     *	Handles `reactor_stopped` exception thrown from
+     *	`loop` method, closing this reactor and port.
+     */
     virtual void start()
     {
         try
@@ -184,6 +283,19 @@ protected:
         }
     }
 
+
+    /**
+     *	Performs `current_port` substitution.
+     *	
+     *	Fetches externally supplied port (waits for it) and
+     *	replaces `current_port` with it, closing previous
+     *	`current_port` if necessary.
+     *	
+     *	Throws `reactor_stopped` exception if `working` variable
+     *	changed to `false`.
+     *	
+     *  Returns `current_port` reference.
+     */
     virtual com_port & fetch_port()
     {
         ulock_t guard(mutex);
@@ -209,10 +321,31 @@ protected:
         return current_port;
     }
     
+
+    /**
+     *	The main working method to be overridden.
+     *	
+     *	The implementation must follow these rules:
+     *  
+     *      - be an (infinite or finite) loop
+     *      - use `fetch_port()` to obtain a current port
+     *      - manually fetch current buffer and queue sizes, etc.
+     *  
+     *  The implementation is recommended to:
+     *  
+     *      - make use of all the provided variables in
+     *        expected way
+     */
     virtual void loop() = 0;
 };
 
 
+/**
+ *	The default implementation of `reactor_base` class.
+ *	
+ *	The implementation relies on `dialect` class in
+ *	packet encoding/decoding.
+ */
 template<class I, class O> class reactor : public reactor_base<I, O>
 {
 
@@ -226,7 +359,7 @@ protected:
 
 public:
 
-    reactor(dialect_t processor,
+    reactor(dialect_t   processor,
             std::size_t ibuffer_size  = 5000,
             std::size_t obuffer_size  = 5000,
             std::size_t iqueue_length = 1000)
@@ -242,23 +375,28 @@ protected:
         std::vector<ipacket_t> ipacket_buffer;
         std::list<opacket_t>   opacket_buffer;
 
-        bool use_iqueue;
+        bool use_iqueue; // local, overlaps
 
         for(;;)
         {
+            // fetch buffer-related and queue-related variables
             {
                 guard_t guard(mutex);
                 ibuffer.capacity(ibuffer_size);
                 obuffer.capacity(obuffer_size);
                 use_iqueue = this->use_iqueue;
             }
+
+            // read from the port; try again on failure
             if (!fetch_port().read(buffer))
             {
                 continue;
             }
 
+            // prepare buffer for reading
             buffer.flip();
 
+            // read all the packets available in the buffer
             for(;;)
             {
                 ipacket_t packet;
@@ -272,8 +410,11 @@ protected:
                 }
             }
 
+            // prepare buffer for further writing
             ibuffer.compact();
 
+            // move read packets to iqueue
+            // move oqueue entries to local buffer
             {
                 guard_t guard(iqueue_mutex);
             
@@ -289,16 +430,20 @@ protected:
                 oqueue.clear();
             }
 
+            // send local buffer to the port
             while (!opacket_buffer.empty())
             {
                 opacket_t packet = opacket_buffer.front();
                 bool written = processor.write(obuffer, packet);
                 
+                // prepare buffer for reading
                 obuffer.flip();
             
+                // write to the port
                 while (fetch_port().write(obuffer) && obuffer.remaining())
                     ;
             
+                // prepare buffer for further writing
                 buffer.compact();
             
                 if (written)
