@@ -137,7 +137,7 @@ public:
         }
     }
 
-    virtual void supply_queue_length(std::size_t queue_length)
+    virtual void supply_iqueue_length(std::size_t queue_length)
     {
         {
             guard_t guard(iqueue_mutex);
