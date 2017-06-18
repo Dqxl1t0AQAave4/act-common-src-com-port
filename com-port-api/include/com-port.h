@@ -4,6 +4,15 @@
 
 #include <logger.h>
 
+
+/**
+ *	The structure allows to specify com port options:
+ *	baud rate, frame format and port name.
+ *	
+ *	It also allows to use an existing DCB structure
+ *	(set `use_dcb = true` and assign `dcb` an existing structure
+ *	or use an appropriate constructor).
+ */
 struct com_port_options
 {
     com_port_options(CString name, DCB dcb)
@@ -41,6 +50,12 @@ struct com_port_options
     DCB     dcb;
 };
 
+
+
+/**
+ *	The class provides a simple interface
+ *	over Windows serial port API.
+ */
 class com_port
 {
 
@@ -55,9 +70,22 @@ public:
         : comm(INVALID_HANDLE_VALUE)
     {
     }
+    
 
+    /**
+     *	Allow only moving constructor to be sure
+     *	that only one com_port object holds the connection.
+     */
     com_port(const com_port &other) = delete;
 
+
+    /**
+     *	Constructs this object with `other` object
+     *	state.
+     *	
+     *	The `other` object will be in clear state
+     *	after this operation, as if it is just created.
+     */
     com_port(com_port &&other)
         : comm(other.comm)
         , comm_name(other.comm_name)
@@ -65,9 +93,25 @@ public:
         other.comm = INVALID_HANDLE_VALUE;
         other.comm_name = _T("");
     }
+    
 
+    /**
+     *	Allow only moving semantics to be sure
+     *	that only one com_port object holds the connection.
+     */
     com_port & operator = (const com_port &other) = delete;
+    
 
+    /**
+     *	Copies the state of other object into this object.
+     *	
+     *	If this com_port is open, it will be closed.
+     *
+     *	If closing fails, the operation just continues.
+     *	
+     *	The `other` object will be in clear state
+     *	after this operation, as if it is just created.
+     */
     com_port & operator = (com_port &&other)
     {
         if (open())
@@ -81,21 +125,47 @@ public:
         return *this;
     }
 
+
+    /**
+     *	Closes this com_port.
+     */
     ~com_port()
     {
         close();
     }
 
+
+    /**
+     *	Checks if this port is open.
+     */
     bool open()
     {
         return (comm != INVALID_HANDLE_VALUE);
     }
 
+
+    /**
+     *	Checks if this port is open.
+     *	
+     *	Equivalent of `open()`.
+     */
     bool operator () ()
     {
         return open();
     }
 
+
+    /**
+     *	Opens the port specified by `options.name`
+     *	with the given parameters.
+     *	
+     *	If this port is already opened, it will be closed
+     *	and reopened with the specified parameters.
+     *	
+     *	If closing fails, the operation just continues.
+     *	
+     *	Returns `true` on success. `false` otherwise.
+     */
     bool open(com_port_options options)
     {
         if (open() && (comm_name == options.name))
@@ -117,6 +187,12 @@ public:
         }
     }
 
+
+    /**
+     *	Closes this port.
+     *	
+     *	Returns `true` on success. `false` otherwise.
+     */
     bool close()
     {
         if (!open())
@@ -134,8 +210,18 @@ public:
         return true;
     }
 
+
 public:
 
+
+    /**
+     *	Reads up to `dst.remaining()` bytes to the `dst` buffer.
+     *
+     *	If read operation on underlying WinAPI port fails,
+     *	this port will be closed.
+     *	
+     *	Returns `true` on success. `false` otherwise.
+     */
     bool read(byte_buffer &dst)
     {
         if (!open())
@@ -155,6 +241,15 @@ public:
         return true;
     }
 
+
+    /**
+     *	Writes up to `dst.remaining()` bytes to the `dst` buffer.
+     *
+     *	If write operation on underlying WinAPI port fails,
+     *	this port will be closed.
+     *	
+     *	Returns `true` on success. `false` otherwise.
+     */
     bool write(byte_buffer &src)
     {
         if (!open())
@@ -174,7 +269,9 @@ public:
         return true;
     }
 
+
 private:
+
 
     bool open0(com_port_options options)
     {
