@@ -76,13 +76,13 @@ public:
 public:
 
     reactor_base(std::size_t ibuffer_size  = 5000,
-                std::size_t obuffer_size  = 5000,
-                std::size_t iqueue_length = 1000)
-                : ibuffer(buffer_size)
-                : obuffer(buffer_size)
-                , ibuffer_size(ibuffer_size)
-                , obuffer_size(obuffer_size)
-                , iqueue_length(iqueue_length)
+                 std::size_t obuffer_size  = 5000,
+                 std::size_t iqueue_length = 1000)
+                 : ibuffer(buffer_size)
+                 : obuffer(buffer_size)
+                 , ibuffer_size(ibuffer_size)
+                 , obuffer_size(obuffer_size)
+                 , iqueue_length(iqueue_length)
     {
         reactor_thread = std::thread(&reactor::start, this);
     }
@@ -216,11 +216,11 @@ protected:
 public:
 
     reactor(dialect_t processor,
-           std::size_t ibuffer_size  = 5000,
-           std::size_t obuffer_size  = 5000,
-           std::size_t iqueue_length = 1000)
-           : reactor_base(ibuffer_size, obuffer_size, iqueue_length)
-           , processor(processor)
+            std::size_t ibuffer_size  = 5000,
+            std::size_t obuffer_size  = 5000,
+            std::size_t iqueue_length = 1000)
+            : reactor_base(ibuffer_size, obuffer_size, iqueue_length)
+            , processor(processor)
     {
     }
 
