@@ -388,13 +388,13 @@ protected:
             }
 
             // read from the port; try again on failure
-            if (!fetch_port().read(buffer))
+            if (!fetch_port().read(ibuffer))
             {
                 continue;
             }
 
             // prepare buffer for reading
-            buffer.flip();
+            ibuffer.flip();
 
             // read all the packets available in the buffer
             for(;;)
@@ -420,13 +420,13 @@ protected:
             
                 if (use_iqueue)
                 {
-                    std::size_t can_put = min(iqueue_length - iqueue.size(), packet_buffer.size());
+                    std::size_t can_put = min(iqueue_length - iqueue.size(), ipacket_buffer.size());
                     iqueue.insert(iqueue.end(),
-                                  packet_buffer.begin(), packet_buffer.begin() + can_put);
-                    packet_buffer.clear();
+                                  ipacket_buffer.begin(), ipacket_buffer.begin() + can_put);
+                    ipacket_buffer.clear();
                 }
             
-                command_buffer.insert(command_buffer.end(), oqueue.begin(), oqueue.end());
+                opacket_buffer.insert(opacket_buffer.end(), oqueue.begin(), oqueue.end());
                 oqueue.clear();
             }
 
@@ -444,7 +444,7 @@ protected:
                     ;
             
                 // prepare buffer for further writing
-                buffer.compact();
+                obuffer.compact();
             
                 if (written)
                 {
