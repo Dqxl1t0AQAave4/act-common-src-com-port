@@ -18,20 +18,20 @@
 #include <logger.h>
 
 
-class worker_stopped
+class reactor_stopped
     : public std::runtime_error
 {
 
 public:
 
-    worker_stopped()
+    reactor_stopped()
         : std::runtime_error("")
     {
     }
 };
 
 
-template<class I, class O> class worker_base
+template<class I, class O> class reactor_base
 {
 
 public:
@@ -47,7 +47,7 @@ protected:
     using ulock_t     = std::unique_lock < mutex_t > ;
     using condition_t = std::condition_variable;
 
-    std::thread            worker_thread;
+    std::thread            reactor_thread;
                            
     mutex_t                mutex;
     condition_t            cv;
@@ -75,7 +75,7 @@ public:
 
 public:
 
-    worker_base(std::size_t ibuffer_size  = 5000,
+    reactor_base(std::size_t ibuffer_size  = 5000,
                 std::size_t obuffer_size  = 5000,
                 std::size_t iqueue_length = 1000)
                 : ibuffer(buffer_size)
@@ -84,10 +84,10 @@ public:
                 , obuffer_size(obuffer_size)
                 , iqueue_length(iqueue_length)
     {
-        worker_thread = std::thread(&worker::start, this);
+        reactor_thread = std::thread(&reactor::start, this);
     }
 
-    virtual ~worker_base()
+    virtual ~reactor_base()
     {
         stop();
     }
@@ -145,7 +145,7 @@ public:
 
     virtual void join()
     {
-        worker_thread.join();
+        reactor_thread.join();
     }
 
 protected:
@@ -162,7 +162,7 @@ protected:
 
             loop();
         }
-        catch (const worker_stopped &)
+        catch (const reactor_stopped &)
         {
             current_port.close();
             {
@@ -186,14 +186,14 @@ protected:
             cv.wait(guard, [&] { return port_changed || !working; });
             if (!working)
             {
-                throw worker_stopped();
+                throw reactor_stopped();
             }
             current_port = std::move(port);
             port_changed = false;
         }
         if (!working)
         {
-            throw worker_stopped();
+            throw reactor_stopped();
         }
         return current_port;
     }
@@ -202,7 +202,7 @@ protected:
 };
 
 
-template<class I, class O> class worker : public worker_base<I, O>
+template<class I, class O> class reactor : public reactor_base<I, O>
 {
 
 public:
@@ -215,11 +215,11 @@ protected:
 
 public:
 
-    worker(dialect_t processor,
+    reactor(dialect_t processor,
            std::size_t ibuffer_size  = 5000,
            std::size_t obuffer_size  = 5000,
            std::size_t iqueue_length = 1000)
-           : worker_base(ibuffer_size, obuffer_size, iqueue_length)
+           : reactor_base(ibuffer_size, obuffer_size, iqueue_length)
            , processor(processor)
     {
     }
