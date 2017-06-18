@@ -11,6 +11,7 @@
 #include <condition_variable>
 #include <exception>
 #include <cassert>
+#include <memory>
 
 #include <byte_buffer.h>
 #include <com-port.h>
@@ -148,14 +149,14 @@ public:
                  std::size_t obuffer_size  = 5000,
                  std::size_t iqueue_length = 1000,
                  bool        use_iqueue    = true)
-                 : ibuffer(buffer_size)
-                 : obuffer(buffer_size)
+                 : ibuffer(ibuffer_size)
+                 , obuffer(obuffer_size)
                  , ibuffer_size(ibuffer_size)
                  , obuffer_size(obuffer_size)
                  , iqueue_length(iqueue_length)
                  , use_iqueue(use_iqueue)
     {
-        reactor_thread = std::thread(&reactor::start, this);
+        reactor_thread = std::thread(&reactor_base::start, this);
     }
 
 
@@ -352,19 +353,21 @@ template<class I, class O> class reactor : public reactor_base<I, O>
 public:
 
     using dialect_t = dialect < I, O > ;
+    using dialect_ptr = std::unique_ptr<dialect_t>;
 
 protected:
 
-    dialect_t processor;
+    dialect_ptr processor;
 
 public:
 
-    reactor(dialect_t   processor,
+    reactor(dialect_ptr processor,
             std::size_t ibuffer_size  = 5000,
             std::size_t obuffer_size  = 5000,
-            std::size_t iqueue_length = 1000)
-            : reactor_base(ibuffer_size, obuffer_size, iqueue_length)
-            , processor(processor)
+            std::size_t iqueue_length = 1000,
+            bool        use_iqueue    = true)
+            : reactor_base(ibuffer_size, obuffer_size, iqueue_length, use_iqueue)
+            , processor(std::move(processor))
     {
     }
 
@@ -400,7 +403,7 @@ protected:
             for(;;)
             {
                 ipacket_t packet;
-                if (!processor.read(packet, ibuffer))
+                if (!processor->read(packet, ibuffer))
                 {
                     break;
                 }
@@ -434,7 +437,7 @@ protected:
             while (!opacket_buffer.empty())
             {
                 opacket_t packet = opacket_buffer.front();
-                bool written = processor.write(obuffer, packet);
+                bool written = processor->write(obuffer, packet);
                 
                 // prepare buffer for reading
                 obuffer.flip();
