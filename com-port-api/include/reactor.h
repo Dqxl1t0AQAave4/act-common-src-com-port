@@ -59,6 +59,7 @@ protected:
     std::size_t            ibuffer_size;
     std::size_t            obuffer_size;
     std::vector<opacket_t> oqueue;
+    bool                   use_iqueue;
 
     // thread-local
     com_port               current_port;
@@ -77,12 +78,14 @@ public:
 
     reactor_base(std::size_t ibuffer_size  = 5000,
                  std::size_t obuffer_size  = 5000,
-                 std::size_t iqueue_length = 1000)
+                 std::size_t iqueue_length = 1000,
+                 bool        use_iqueue    = true)
                  : ibuffer(buffer_size)
                  : obuffer(buffer_size)
                  , ibuffer_size(ibuffer_size)
                  , obuffer_size(obuffer_size)
                  , iqueue_length(iqueue_length)
+                 , use_iqueue(use_iqueue)
     {
         reactor_thread = std::thread(&reactor::start, this);
     }
@@ -123,6 +126,14 @@ public:
         {
             guard_t guard(mutex);
             this->obuffer_size = buffer_size;
+        }
+    }
+
+    virtual void supply_use_iqueue(bool use)
+    {
+        {
+            guard_t guard(mutex);
+            this->use_iqueue = use;
         }
     }
 
@@ -231,12 +242,15 @@ protected:
         std::vector<ipacket_t> ipacket_buffer;
         std::list<opacket_t>   opacket_buffer;
 
+        bool use_iqueue;
+
         for(;;)
         {
             {
                 guard_t guard(mutex);
                 ibuffer.capacity(ibuffer_size);
                 obuffer.capacity(obuffer_size);
+                use_iqueue = this->use_iqueue;
             }
             if (!fetch_port().read(buffer))
             {
@@ -252,7 +266,10 @@ protected:
                 {
                     break;
                 }
-                ipacket_buffer.push_back(packet);
+                if (use_iqueue)
+                {
+                    ipacket_buffer.push_back(packet);
+                }
             }
 
             ibuffer.compact();
@@ -260,10 +277,13 @@ protected:
             {
                 guard_t guard(iqueue_mutex);
             
-                std::size_t can_put = min(iqueue_length - iqueue.size(), packet_buffer.size());
-                iqueue.insert(iqueue.end(),
-                                    packet_buffer.begin(), packet_buffer.begin() + can_put);
-                packet_buffer.clear();
+                if (use_iqueue)
+                {
+                    std::size_t can_put = min(iqueue_length - iqueue.size(), packet_buffer.size());
+                    iqueue.insert(iqueue.end(),
+                                  packet_buffer.begin(), packet_buffer.begin() + can_put);
+                    packet_buffer.clear();
+                }
             
                 command_buffer.insert(command_buffer.end(), oqueue.begin(), oqueue.end());
                 oqueue.clear();
