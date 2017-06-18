@@ -42,7 +42,7 @@ public:
     using mutex_t = std::mutex;
     using guard_t = std::lock_guard < mutex_t > ;
 
-private:
+protected:
 
     using ulock_t     = std::unique_lock < mutex_t > ;
     using condition_t = std::condition_variable;
@@ -82,12 +82,12 @@ public:
         worker_thread = std::thread(&worker::start, this);
     }
 
-    ~worker()
+    virtual ~worker()
     {
         stop();
     }
 
-    void supply_port(com_port port)
+    virtual void supply_port(com_port port)
     {
         {
             guard_t guard(mutex);
@@ -97,7 +97,7 @@ public:
         cv.notify_one();
     }
 
-    void supply_command(act_photo::command_t command)
+    virtual void supply_command(act_photo::command_t command)
     {
         {
             guard_t guard(mutex);
@@ -105,7 +105,7 @@ public:
         }
     }
 
-    void supply_buffer_size(std::size_t buffer_size)
+    virtual void supply_buffer_size(std::size_t buffer_size)
     {
         {
             guard_t guard(mutex);
@@ -113,7 +113,7 @@ public:
         }
     }
 
-    void supply_queue_length(std::size_t queue_length)
+    virtual void supply_queue_length(std::size_t queue_length)
     {
         {
             guard_t guard(queue_mutex);
@@ -121,7 +121,7 @@ public:
         }
     }
 
-    void stop()
+    virtual void stop()
     {
         {
             guard_t guard(mutex);
@@ -130,14 +130,14 @@ public:
         cv.notify_one();
     }
 
-    void join()
+    virtual void join()
     {
         worker_thread.join();
     }
 
-private:
+protected:
 
-    void start()
+    virtual void start()
     {
         try
         {
@@ -160,7 +160,7 @@ private:
         }
     }
 
-    com_port & fetch_port()
+    virtual com_port & fetch_port()
     {
         ulock_t guard(mutex);
         if (port_changed)
@@ -185,7 +185,7 @@ private:
         return current_port;
     }
     
-    void loop()
+    virtual void loop()
     {
         char packet_bytes[act_photo::packet_body_size];
 
@@ -249,7 +249,7 @@ private:
         }
     }
 
-    bool detect_packet_start()
+    virtual bool detect_packet_start()
     {
         char c;
         bool detected = false;
