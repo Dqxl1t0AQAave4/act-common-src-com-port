@@ -46,7 +46,7 @@ public:
      *	
      *	Returns `true` on success, `false` otherwise.
      */
-    bool read(ipacket_t &dst, byte_buffer &src) = 0;
+    virtual bool read(ipacket_t &dst, byte_buffer &src) = 0;
 
 
     /**
@@ -57,5 +57,5 @@ public:
      *	Throws `dialect_exception` in case if `dst` capacity
      *	is lower than amount of bytes need to represent `src`.
      */
-    bool write(byte_buffer &dst, const opacket_t &src) = 0;
+    virtual bool write(byte_buffer &dst, const opacket_t &src) = 0;
 };
