@@ -47,28 +47,28 @@ private:
     using ulock_t     = std::unique_lock < mutex_t > ;
     using condition_t = std::condition_variable;
 
-    std::thread                       worker_thread;
-                                      
-    mutex_t                           mutex;
-    condition_t                       cv;
+    std::thread            worker_thread;
+                           
+    mutex_t                mutex;
+    condition_t            cv;
 
     // guarded by `mutex`
-    bool                              working;
-    com_port                          port;
-    bool                              port_changed;
-    std::size_t                       buffer_size;
+    bool                   working;
+    com_port               port;
+    bool                   port_changed;
+    std::size_t            buffer_size;
     std::vector<command_t> commands;
 
     // thread-local
-    com_port                          current_port;
-    byte_buffer                       buffer;
+    com_port               current_port;
+    byte_buffer            buffer;
 
 public:
 
-    mutex_t                           queue_mutex;
+    mutex_t                queue_mutex;
 
     // guarded by `queue_mutex`
-    std::size_t                       queue_length;
+    std::size_t            queue_length;
     std::list<packet_t>    packet_queue;
 
 public:
