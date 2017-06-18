@@ -168,17 +168,12 @@ public:
      */
     bool open(com_port_options options)
     {
-        if (open() && (comm_name == options.name))
-        {
-            logger::log(_T("port [%s] already opened"), options.name);
-            return true;
-        }
         if (open())
         {
-            if (!close())
-            {
-                return false;
-            }
+            // don't check for result
+            // we still cannot do anything with it
+            close();
+
             return open0(options);
         }
         else
