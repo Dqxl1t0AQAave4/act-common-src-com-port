@@ -27,9 +27,6 @@
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\worker.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="include\byte_buffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -39,21 +36,24 @@
     <ClInclude Include="example\byte_buffer.h">
       <Filter>example</Filter>
     </ClInclude>
-    <ClInclude Include="example\worker.h">
-      <Filter>example</Filter>
-    </ClInclude>
     <ClInclude Include="include\dialect.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="include\reactor.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="example\reactor.h">
+      <Filter>example</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="worker.cpp">
+    <ClCompile Include="example.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="example.cpp">
+    <ClCompile Include="reactor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

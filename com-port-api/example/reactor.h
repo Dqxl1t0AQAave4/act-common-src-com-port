@@ -1,6 +1,6 @@
 #pragma once
 
-#include <worker.h>
+#include <reactor.h>
 
 namespace {
 namespace example
