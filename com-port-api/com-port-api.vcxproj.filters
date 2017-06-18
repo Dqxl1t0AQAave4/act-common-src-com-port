@@ -16,6 +16,9 @@
     <Filter Include="example">
       <UniqueIdentifier>{222a3d8b-c9a6-4f1c-8f89-856585a06b3f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="include">
+      <UniqueIdentifier>{df8913da-0e60-4baf-b2a2-8dce217ce6a8}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="ReadMe.txt" />
@@ -27,23 +30,23 @@
     <ClInclude Include="targetver.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="include\byte_buffer.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\com-port.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="example\byte_buffer.h">
       <Filter>example</Filter>
     </ClInclude>
-    <ClInclude Include="include\dialect.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="include\reactor.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="example\reactor.h">
       <Filter>example</Filter>
+    </ClInclude>
+    <ClInclude Include="include\reactor.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\dialect.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\com-port.h">
+      <Filter>include</Filter>
+    </ClInclude>
+    <ClInclude Include="include\byte_buffer.h">
+      <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
