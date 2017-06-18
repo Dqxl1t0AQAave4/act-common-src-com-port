@@ -75,9 +75,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <Text Include="ReadMe.txt" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="example\byte_buffer.h" />
     <ClInclude Include="example\reactor.h" />
     <ClInclude Include="include\byte_buffer.h" />
