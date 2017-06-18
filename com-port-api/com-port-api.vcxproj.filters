@@ -42,6 +42,9 @@
     <ClInclude Include="example\worker.h">
       <Filter>example</Filter>
     </ClInclude>
+    <ClInclude Include="include\dialect.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
