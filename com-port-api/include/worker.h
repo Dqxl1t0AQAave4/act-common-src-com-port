@@ -14,8 +14,8 @@
 
 #include <byte_buffer.h>
 #include <com-port.h>
+#include <dialect.h>
 #include <logger.h>
-#include "act-photo.h"
 
 
 class worker_stopped
@@ -31,13 +31,13 @@ public:
 };
 
 
-template<class C, class P> class worker_base
+template<class I, class O> class worker_base
 {
 
 public:
 
-    using command_t = C;
-    using packet_t  = P;
+    using ipacket_t = I;
+    using opacket_t = O;
 
     using mutex_t = std::mutex;
     using guard_t = std::lock_guard < mutex_t > ;
@@ -56,28 +56,33 @@ protected:
     bool                   working;
     com_port               port;
     bool                   port_changed;
-    std::size_t            buffer_size;
-    std::vector<command_t> commands;
+    std::size_t            ibuffer_size;
+    std::size_t            obuffer_size;
+    std::vector<opacket_t> oqueue;
 
     // thread-local
     com_port               current_port;
-    byte_buffer            buffer;
+    byte_buffer            ibuffer;
+    byte_buffer            obuffer;
 
 public:
 
-    mutex_t                queue_mutex;
+    mutex_t                iqueue_mutex;
 
-    // guarded by `queue_mutex`
-    std::size_t            queue_length;
-    std::list<packet_t>    packet_queue;
+    // guarded by `iqueue_mutex`
+    std::size_t            iqueue_length;
+    std::list<ipacket_t>   iqueue;
 
 public:
 
-    worker_base(std::size_t buffer_size = 5000,
-                std::size_t queue_length = 1000)
-                : buffer(buffer_size)
-                , buffer_size(buffer_size)
-                , queue_length(queue_length)
+    worker_base(std::size_t ibuffer_size  = 5000,
+                std::size_t obuffer_size  = 5000,
+                std::size_t iqueue_length = 1000)
+                : ibuffer(buffer_size)
+                : obuffer(buffer_size)
+                , ibuffer_size(ibuffer_size)
+                , obuffer_size(obuffer_size)
+                , iqueue_length(iqueue_length)
     {
         worker_thread = std::thread(&worker::start, this);
     }
@@ -97,27 +102,35 @@ public:
         cv.notify_one();
     }
 
-    virtual void supply_command(act_photo::command_t command)
+    virtual void supply_opacket(opacket_t packet)
     {
         {
             guard_t guard(mutex);
-            commands.push_back(command);
+            oqueue.push_back(packet);
         }
     }
 
-    virtual void supply_buffer_size(std::size_t buffer_size)
+    virtual void supply_ibuffer_size(std::size_t buffer_size)
     {
         {
             guard_t guard(mutex);
-            this->buffer_size = buffer_size;
+            this->ibuffer_size = buffer_size;
+        }
+    }
+
+    virtual void supply_obuffer_size(std::size_t buffer_size)
+    {
+        {
+            guard_t guard(mutex);
+            this->obuffer_size = buffer_size;
         }
     }
 
     virtual void supply_queue_length(std::size_t queue_length)
     {
         {
-            guard_t guard(queue_mutex);
-            this->queue_length = queue_length;
+            guard_t guard(iqueue_mutex);
+            this->iqueue_length = queue_length;
         }
     }
 
@@ -188,12 +201,26 @@ protected:
     virtual void loop() = 0;
 };
 
-template<class C, class P> class worker : public worker_base<C, P>
+
+template<class I, class O> class worker : public worker_base<I, O>
 {
 
-    worker(std::size_t buffer_size = 5000,
-           std::size_t queue_length = 1000)
-           : worker_base(buffer_size, queue_length)
+public:
+
+    using dialect_t = dialect < I, O > ;
+
+protected:
+
+    dialect_t processor;
+
+public:
+
+    worker(dialect_t processor,
+           std::size_t ibuffer_size  = 5000,
+           std::size_t obuffer_size  = 5000,
+           std::size_t iqueue_length = 1000)
+           : worker_base(ibuffer_size, obuffer_size, iqueue_length)
+           , processor(processor)
     {
     }
 
@@ -201,18 +228,15 @@ protected:
 
     virtual void loop()
     {
-        char packet_bytes[act_photo::packet_body_size];
+        std::vector<ipacket_t> ipacket_buffer;
+        std::list<opacket_t>   opacket_buffer;
 
-        std::vector<act_photo::packet_t> packet_buffer;
-        packet_buffer.reserve(buffer.capacity() / act_photo::packet_body_size);
-
-        std::list<act_photo::command_t> command_buffer;
-
-        for (;;)
+        for(;;)
         {
             {
                 guard_t guard(mutex);
-                buffer.capacity(buffer_size);
+                ibuffer.capacity(ibuffer_size);
+                obuffer.capacity(obuffer_size);
             }
             if (!fetch_port().read(buffer))
             {
@@ -221,76 +245,47 @@ protected:
 
             buffer.flip();
 
-            do
+            for(;;)
             {
-                if (!detect_packet_start()) break;
-                buffer.get(packet_bytes, act_photo::packet_body_size);
-                packet_buffer.push_back(act_photo::read_packet(packet_bytes));
+                ipacket_t packet;
+                if (!processor.read(packet, ibuffer))
+                {
+                    break;
+                }
+                ipacket_buffer.push_back(packet);
             }
-            while (buffer.remaining() >= act_photo::packet_size);
 
-            buffer.reset();
+            ibuffer.compact();
 
             {
-                guard_t guard(queue_mutex);
-
-                std::size_t can_put = min(queue_length - packet_queue.size(), packet_buffer.size());
-                packet_queue.insert(packet_queue.end(),
+                guard_t guard(iqueue_mutex);
+            
+                std::size_t can_put = min(iqueue_length - iqueue.size(), packet_buffer.size());
+                iqueue.insert(iqueue.end(),
                                     packet_buffer.begin(), packet_buffer.begin() + can_put);
                 packet_buffer.clear();
-
-                command_buffer.insert(command_buffer.end(), commands.begin(), commands.end());
-                commands.clear();
+            
+                command_buffer.insert(command_buffer.end(), oqueue.begin(), oqueue.end());
+                oqueue.clear();
             }
 
-            while (!command_buffer.empty())
+            while (!opacket_buffer.empty())
             {
-                act_photo::command_t command = command_buffer.front();
-                // for simplicity as the buffer size must commonly be much greater
-                assert(command.bytes.size() + 2 <= buffer.remaining());
-                act_photo::serialize(command, buffer.data());
-                buffer.increase_position(command.bytes.size() + 2);
+                opacket_t packet = opacket_buffer.front();
+                bool written = processor.write(obuffer, packet);
                 
-                buffer.flip();
-
-                while (fetch_port().write(buffer) && buffer.remaining())
+                obuffer.flip();
+            
+                while (fetch_port().write(obuffer) && obuffer.remaining())
                     ;
-
-                buffer.reset();
-
-                command_buffer.pop_front();
-            }
-        }
-    }
-
-    virtual bool detect_packet_start()
-    {
-        char c;
-        bool detected = false;
-        while (!detected)
-        {
-            if (!buffer.get(c))
-            {
-                break;
-            }
-            if (c == act_photo::packet_delimiter)
-            {
-                if ((buffer.remaining() >= act_photo::packet_size - 1))
+            
+                buffer.compact();
+            
+                if (written)
                 {
-                    char checksum = buffer.data()[act_photo::packet_size - 2];
-                    char s = act_photo::read_checksum(buffer.data() - 1); // the buffer position is at least 1
-                    if (checksum == s)
-                    {
-                        detected = true;
-                        break;
-                    }
+                    opacket_buffer.pop_front();
                 }
             }
         }
-        if (buffer.remaining() < act_photo::packet_size - 1)
-        {
-            return false;
-        }
-        return detected;
     }
 };
