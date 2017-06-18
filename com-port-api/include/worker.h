@@ -18,9 +18,6 @@
 #include "act-photo.h"
 
 
-// ======================= worker ========================================
-
-
 class worker_stopped
     : public std::runtime_error
 {
@@ -34,10 +31,13 @@ public:
 };
 
 
-class worker
+template<class C, class P> class worker
 {
 
 public:
+
+    using command_t = C;
+    using packet_t  = P;
 
     using mutex_t = std::mutex;
     using guard_t = std::lock_guard < mutex_t > ;
@@ -57,7 +57,7 @@ private:
     com_port                          port;
     bool                              port_changed;
     std::size_t                       buffer_size;
-    std::vector<act_photo::command_t> commands;
+    std::vector<command_t> commands;
 
     // thread-local
     com_port                          current_port;
@@ -69,7 +69,7 @@ public:
 
     // guarded by `queue_mutex`
     std::size_t                       queue_length;
-    std::list<act_photo::packet_t>    packet_queue;
+    std::list<packet_t>    packet_queue;
 
 public:
 
