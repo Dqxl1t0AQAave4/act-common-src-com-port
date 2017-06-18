@@ -130,6 +130,14 @@ public:
      *	Turning off `use_iqueue` variable
      *	does not affect `iqueue_length` value
      *	and `iqueue` capacity.
+     *	
+     *	The `iqueue` can be accessed by the user
+     *	ONLY IF `iqueue_mutex` IS ACQUIRED BY THE USER
+     *	
+     *	After the user interaction with `iqueue` finished,
+     *	IT MUST ME CLEARED BY THE USER MANUALLY
+     *	
+     *	See usage example
      */
     std::size_t            iqueue_length;
     std::list<ipacket_t>   iqueue;
