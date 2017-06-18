@@ -5,6 +5,8 @@
 
 #include <byte_buffer.h>
 
+namespace com_port_api
+{
 
 class dialect_exception
     : public std::runtime_error
@@ -70,3 +72,5 @@ public:
      */
     virtual bool write(byte_buffer &dst, const opacket_t &src) = 0;
 };
+
+}

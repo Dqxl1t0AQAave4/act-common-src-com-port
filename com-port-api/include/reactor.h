@@ -18,7 +18,9 @@
 #include <dialect.h>
 #include <logger.h>
 
-
+namespace com_port_api
+{
+    
 class reactor_stopped
     : public std::runtime_error
 {
@@ -465,3 +467,5 @@ protected:
         }
     }
 };
+
+}

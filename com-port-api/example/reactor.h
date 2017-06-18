@@ -7,6 +7,8 @@ namespace {
 namespace example
 {
 
+    using namespace com_port_api;
+
     using dialect_t = dialect < char, char > ;
     using reactor_t = reactor < char, char > ;
 

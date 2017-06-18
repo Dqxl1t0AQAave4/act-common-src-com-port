@@ -4,6 +4,8 @@
 
 #include <logger.h>
 
+namespace com_port_api
+{
 
 /**
  *	The structure allows to specify com port options:
@@ -360,3 +362,5 @@ private:
         return true;
     }
 };
+
+}

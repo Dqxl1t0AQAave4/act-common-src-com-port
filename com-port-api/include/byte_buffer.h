@@ -2,6 +2,9 @@
 
 #include <vector>
 
+namespace com_port_api
+{
+
 /*
  * Inspired by the `java.nio.ByteBuffer`.
  * 
@@ -311,3 +314,5 @@ public:
         return get(&byte, 1) == 0;
     }
 };
+
+}

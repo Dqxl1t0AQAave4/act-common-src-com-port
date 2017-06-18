@@ -12,6 +12,8 @@ namespace {
 namespace example
 {
 
+    using namespace com_port_api;
+
     class data_source
     {
         std::iostream *stream;
