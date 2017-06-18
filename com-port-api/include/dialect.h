@@ -39,6 +39,17 @@ public:
     const size_t max_allowed_opacket_size;
 
 
+    dialect(size_t max_allowed_ipacket_size, size_t max_allowed_opacket_size)
+        : max_allowed_ipacket_size(max_allowed_ipacket_size)
+        , max_allowed_opacket_size(max_allowed_opacket_size)
+    {
+    }
+
+    virtual ~dialect()
+    {
+    }
+
+
     /**
      *	Reads one packet from `src` to the specified `dst`.
      *	
