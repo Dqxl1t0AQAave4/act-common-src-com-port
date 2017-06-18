@@ -1,7 +1,6 @@
 #pragma once
 
 
-#include <Windows.h>
 #include <afxwin.h>
 
 #include <vector>
@@ -303,7 +302,7 @@ public:
         DWORD bytes_read;
         if (!ReadFile(comm, dst.data(), dst.remaining(), &bytes_read, NULL))
         {
-            logger::log_last_error(GetLastError());
+            logger::log_system_error(GetLastError());
             logger::log(_T("error while reading the data... closing port [%s]"), comm_name);
             close();
             return false;
@@ -322,7 +321,7 @@ public:
         DWORD bytes_written;
         if (!WriteFile(comm, src.data(), src.remaining(), &bytes_written, NULL))
         {
-            logger::log_last_error(GetLastError());
+            logger::log_system_error(GetLastError());
             logger::log(_T("error while writing the data... closing port [%s]"), comm_name);
             close();
             return false;
@@ -356,7 +355,7 @@ private:
             {
                 logger::log(_T("error occurred while opening [%s] port"), name);
             }
-            logger::log_last_error(errorMessageID);
+            logger::log_system_error(errorMessageID);
             return false;
         }
 
@@ -372,7 +371,7 @@ private:
 
         if (!SetCommTimeouts(comm, &CommTimeOuts))
         {
-            logger::log_last_error(GetLastError());
+            logger::log_system_error(GetLastError());
             CloseHandle(comm);
             comm = INVALID_HANDLE_VALUE;
             logger::log(_T("cannot setup port [%s] timeouts"), name);
@@ -406,7 +405,7 @@ private:
 
         if (!SetCommState(comm, &ComDCM))
         {
-            logger::log_last_error(GetLastError());
+            logger::log_system_error(GetLastError());
             CloseHandle(comm);
             comm = INVALID_HANDLE_VALUE;
             logger::log(_T("cannot setup port [%s] configuration"), name);
