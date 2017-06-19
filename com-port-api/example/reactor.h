@@ -50,6 +50,7 @@ namespace example
 
         // creating and starting reactor with default parameters
         reactor_t r(std::move(d));
+        r.start();
 
         // opening port is required since reactor
         // does not know anything of the port to use

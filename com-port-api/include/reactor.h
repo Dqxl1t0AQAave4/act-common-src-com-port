@@ -166,7 +166,6 @@ public:
                  , iqueue_length(iqueue_length)
                  , use_iqueue(use_iqueue)
     {
-        reactor_thread = std::thread(&reactor_base::start, this);
     }
 
 
@@ -252,6 +251,18 @@ public:
 
 
     /**
+     *	Synchronously creates and starts a worker thread.
+     *	
+     *	Implementations may override this function
+     *	in order to provide another method of thread creation.
+     */
+    virtual void start()
+    {
+        reactor_thread = std::thread(&reactor_base::run, this);
+    }
+
+
+    /**
      *	Waits for this reactor termination.
      */
     virtual void join()
@@ -271,7 +282,7 @@ protected:
      *	Handles `reactor_stopped` exception thrown from
      *	`loop` method, closing this reactor and port.
      */
-    virtual void start()
+    virtual void run()
     {
         try
         {
