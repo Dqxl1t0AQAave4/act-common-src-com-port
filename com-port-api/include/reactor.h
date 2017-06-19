@@ -277,7 +277,10 @@ public:
      */
     virtual void join()
     {
-        reactor_thread.join();
+        if (reactor_thread.joinable())
+        {
+            reactor_thread.join();
+        }
     }
 
 
