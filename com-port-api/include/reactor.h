@@ -171,10 +171,20 @@ public:
 
     /**
      *	Stops the reactor.
+     *	
+     *	Calls to `stop` and sequentially to `join`.
+     *  Call to `join` is required since worker thread
+     *  can still rely on class fields which otherwise
+     *  be destroyed.
+     *  
+     *  Note that subclass must override the destructor
+     *  (in the same way) in order to "delay" destruction
+     *  of its field until the worker thread stop.
      */
     virtual ~reactor_base()
     {
         stop();
+        join();
     }
 
 
@@ -391,6 +401,19 @@ public:
             , processor(std::move(processor))
     {
     }
+
+
+    /**
+     *	Stops the reactor.
+     *	
+     *	See the base class note on this method.
+     */
+    virtual ~reactor() override
+    {
+        stop();
+        join();
+    }
+
 
 protected:
 
