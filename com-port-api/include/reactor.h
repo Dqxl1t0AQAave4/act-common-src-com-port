@@ -420,7 +420,7 @@ public:
 
 protected:
 
-    virtual void loop()
+    virtual void loop() override
     {
         std::vector<ipacket_t> ipacket_buffer;
         std::list<opacket_t>   opacket_buffer;
