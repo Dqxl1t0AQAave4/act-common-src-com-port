@@ -104,5 +104,58 @@ namespace com_port_api
 
         };
 
+        using error_handler_t   = std::function < void (const error::channel_error &) > ;
+        using success_handler_t = std::function < void () > ;
+        using result_handler_t  = std::function < void (byte_buffer &) > ;
+
+
+        class channel_base
+        {
+
+
+        public:
+
+
+            /**
+             *	std::get<0> -> success/failure
+             *	std::get<1> -> state on a moment of invocation
+             *	std::get<2> -> new state set
+             */
+            using result_t = std::tuple <bool, state_t, state_t> ;
+
+
+        public:
+
+
+            virtual ~channel_base()
+            {
+            }
+
+
+        public:
+
+
+            virtual result_t read (byte_buffer &dst) { throw error::channel_error("unsupported"); };
+            virtual result_t write(byte_buffer &src) { throw error::channel_error("unsupported"); };
+            virtual result_t open () { throw error::channel_error("unsupported"); };
+            virtual result_t close() { throw error::channel_error("unsupported"); };
+
+            
+            virtual result_t read (byte_buffer       &dst,
+                                   result_handler_t  success_cb,
+                                   error_handler_t   failure_cb) { throw error::channel_error("unsupported"); };
+                                                 
+            virtual result_t write(byte_buffer       &src,
+                                   result_handler_t  success_cb,
+                                   error_handler_t   failure_cb) { throw error::channel_error("unsupported"); };
+
+            virtual result_t open (success_handler_t success_cb,
+                                   error_handler_t   failure_cb) { throw error::channel_error("unsupported"); };
+
+            virtual result_t close(success_handler_t success_cb,
+                                   error_handler_t   failure_cb) { throw error::channel_error("unsupported"); };
+
+        };
+
     }
 }
