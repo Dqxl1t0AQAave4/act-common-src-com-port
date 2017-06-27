@@ -444,5 +444,488 @@ namespace com_port_api
             }
         };
 
+        
+        class atomic_state_machine : public state_machine
+        {
+
+        protected:
+
+            std::atomic<state_t> _state;
+            std::atomic<state_t> _flags;
+
+        public:
+
+            atomic_state_machine()
+            {
+            }
+
+            atomic_state_machine(const atomic_state_machine &other)
+            {
+                _state = other.state();
+                _flags = other.flags();
+            }
+
+            virtual state_t state() const override
+            {
+                return _state.load(std::memory_order_relaxed);
+            }
+            
+            virtual result_t set_state(state_t expected,
+                                       state_t desired,
+                                       guarantee_t guarantee = guarantee_t::acq_rel) override
+            {
+                bool success = _state.compare_exchange_strong(
+                    expected, desired, static_cast<std::memory_order>(guarantee),
+                                       std::memory_order_relaxed);
+
+                return result_t{ success, expected, (success ? desired : expected) };
+            }
+
+
+            virtual flags_t flags() const override
+            {
+                return _flags.load(std::memory_order_relaxed);
+            }
+            
+            virtual void set_flags(flags_t desired) override
+            {
+                return _flags.store(desired, std::memory_order_relaxed);
+            }
+
+
+            virtual result_t lock_op  (state_diagram &d,
+                                       constant_t    op) override
+            {
+                result_t r;
+
+                do
+                {
+                    flags_t current_flags = flags();
+                    state_t current_state = state();
+                    state_diagram::result_t state_transition_result
+                        = d.lock_op(op, current_state, current_flags);
+
+                    if (!std::get<0>(state_transition_result))
+                    {
+                        return result_t{ false, current_state, current_state };
+                    }
+
+                    r = set_state(current_state,
+                                  std::get<1>(state_transition_result),
+                                  std::get<2>(state_transition_result));
+                }
+                while (!std::get<0>(r));
+
+                return r;
+            }
+
+            virtual result_t unlock_op(state_diagram    &d,
+                                       constant_t       op,
+                                       state_t          locked_with,
+                                       ops::result_type op_result) override
+            {
+                result_t r;
+
+                do
+                {
+                    flags_t current_flags = flags();
+                    state_t current_state = state();
+                    state_diagram::result_t state_transition_result
+                        = d.unlock_op(op, current_state, locked_with, current_flags, op_result);
+
+                    if (!std::get<0>(state_transition_result))
+                    {
+                        return result_t{ false, current_state, current_state };
+                    }
+
+                    if (op_result == ops::result_type::guarantee)
+                    {
+                        provide_guarantee(std::get<2>(state_transition_result));
+                        return result_t{ true, current_state, current_state };
+                    }
+
+                    r = set_state(current_state,
+                                  std::get<1>(state_transition_result),
+                                  std::get<2>(state_transition_result));
+                }
+                while (!std::get<0>(r));
+
+                return r;
+            }
+
+
+            virtual bool wait_unconditionally(states::predicate_t predicate) const override
+            {
+                return false;
+            }
+
+        };
+
+        
+        class blocking_state_machine : public state_machine
+        {
+
+        protected:
+
+            mutable std::mutex _mx;
+            mutable std::condition_variable _cv;
+            mutable unsigned int _force_signals;
+
+            state_t _state;
+            std::atomic<state_t> _flags;
+
+        public:
+
+            blocking_state_machine()
+                : _force_signals(0)
+            {
+            }
+
+            blocking_state_machine(const blocking_state_machine &other)
+                : _force_signals(0)
+            {
+                _state = other.state();
+                _flags = other.flags();
+            }
+
+            virtual state_t state() const override
+            {
+                std::lock_guard<std::mutex> guard(_mx);
+                return _state;
+            }
+            
+            virtual result_t set_state(state_t expected,
+                                       state_t desired,
+                                       guarantee_t guarantee = guarantee_t::acq_rel) override
+            {
+                state_t old;
+                bool success, signal;
+                {
+                    std::lock_guard<std::mutex> guard(_mx);
+
+                    old     = _state;
+                    success = (old == expected);
+                    signal  = (old != desired);
+
+                    if (success && signal)
+                    {
+                        _state = desired;
+                    }
+                }
+
+                if (success && signal)
+                {
+                    _cv.notify_all();
+                }
+
+                return result_t{ success, old, (success ? desired : old) };
+            }
+
+
+            virtual flags_t flags() const override
+            {
+                return _flags.load(std::memory_order_relaxed);
+            }
+            
+            virtual void set_flags(flags_t desired) override
+            {
+                return _flags.store(desired, std::memory_order_relaxed);
+            }
+
+
+            virtual result_t lock_op  (state_diagram &d,
+                                       constant_t    op) override
+            {
+                flags_t current_flags = flags();
+                state_t current_state;
+
+                std::lock_guard<std::mutex> guard(_mx);
+                
+                current_state = _state;
+
+                state_diagram::result_t state_transition_result
+                    = d.lock_op(op, current_state, current_flags);
+
+                if (!std::get<0>(state_transition_result))
+                {
+                    return result_t{ false, current_state, current_state };
+                }
+
+                set_state_unprotected(std::get<1>(state_transition_result));
+
+                return result_t{ true, current_state, std::get<1>(state_transition_result) };
+            }
+
+            virtual result_t unlock_op(state_diagram    &d,
+                                       constant_t       op,
+                                       state_t          locked_with,
+                                       ops::result_type op_result) override
+            {
+                flags_t current_flags = flags();
+                state_t current_state;
+
+                std::lock_guard<std::mutex> guard(_mx);
+                
+                current_state = _state;
+
+                state_diagram::result_t state_transition_result
+                    = d.unlock_op(op, current_state, locked_with, current_flags, op_result);
+
+                if (!std::get<0>(state_transition_result))
+                {
+                    return result_t{ false, current_state, current_state };
+                }
+
+                if (op_result == ops::result_type::guarantee)
+                {
+                    /* providing a guarantee is unnecessary since mutex locking
+                       and unlocking already provides acq_rel guarantee */
+                    /* provide_guarantee(std::get<2>(state_transition_result)); */
+                    return result_t{ true, current_state, current_state };
+                }
+
+                set_state_unprotected(std::get<1>(state_transition_result));
+
+                return result_t{ true, current_state, std::get<1>(state_transition_result) };
+            }
+
+
+            virtual bool wait_unconditionally(states::predicate_t predicate) const override
+            {
+                result_t result = _wait
+                (
+                    [&] (std::unique_lock<std::mutex> &lock, std::function<bool()> pred)
+                    {
+                        _cv.wait(lock, pred);
+                    },
+                    predicate,
+                    true
+                );
+                return std::get<0>(result);
+            }
+
+            void notify() const
+            {
+                {
+                    std::unique_lock<std::mutex> lock(_mx);
+                    ++_force_signals;
+                }
+                _cv.notify_all();
+            }
+
+            template<class _Rep, class _Period>
+            result_t wait(const std::chrono::duration<_Rep, _Period>& _Rel_time,
+                          std::function<bool (const state_t &)> predicate) const
+            {
+                return _wait
+                (
+                    [&] (std::unique_lock<std::mutex> &lock, std::function<bool()> pred)
+                    {
+                        _cv.wait_for(lock, _Rel_time, pred);
+                    },
+                    predicate
+                );
+            }
+
+
+            template<class _Rep, class _Period>
+            result_t wait(const std::chrono::duration<_Rep, _Period>& _Rel_time,
+                          state_t expected,
+                          bool expect_all_set) const
+            {
+                return _wait
+                (
+                    [&] (std::unique_lock<std::mutex> &lock, std::function<bool()> pred)
+                    {
+                        _cv.wait_for(lock, _Rel_time, pred);
+                    },
+                    [expected, expect_all_set](const state_t &s)
+                    { return (expect_all_set ? (s & expected) : (s | expected)); }
+                );
+            }
+
+
+            result_t wait(states::predicate_t predicate) const
+            {
+                return _wait
+                (
+                    [&] (std::unique_lock<std::mutex> &lock, std::function<bool()> pred)
+                    {
+                        _cv.wait(lock, pred);
+                    },
+                    predicate
+                );
+            }
+
+
+            result_t wait(state_t expected, bool expect_all_set) const
+            {
+                return _wait
+                (
+                    [&] (std::unique_lock<std::mutex> &lock, std::function<bool()> pred)
+                    {
+                        _cv.wait(lock, pred);
+                    },
+                    [expected, expect_all_set] (const state_t &s)
+                    { return (expect_all_set ? (s & expected) : (s | expected)); }
+                );
+            }
+
+
+        protected:
+
+            
+            virtual void set_state_unprotected(state_t desired)
+            {
+                if (_state == desired)
+                {
+                    return;
+                }
+                _state = desired;
+                _cv.notify_all();
+            }
+
+
+        private:
+
+            
+            result_t _wait
+            (
+                std::function < void (std::unique_lock<std::mutex> &, std::function<bool()>) > wait_operation,
+                states::predicate_t expected,
+                bool unconditionally = false
+            ) const
+            {
+                std::unique_lock<std::mutex> lock(_mx);
+
+                state_t started_with = _state;
+
+                unsigned int signals = _force_signals;
+
+                if (expected(_state))
+                {
+                    return result_t{ true, started_with, _state };
+                }
+
+                if (_state & states::closed)
+                {
+                    return result_t{ false, started_with, _state };
+                }
+
+                wait_operation(lock, [=] ()
+                {
+                    return
+                    (
+                        /* must fail the operation in case if
+                           `signal()` method called */
+                        ((!unconditionally) && (signals != _force_signals)) ||
+                        /* handles normal case */
+                        expected(_state)                                    ||
+                        (_state & states::closed)
+                    );
+                });
+
+                return result_t{ expected(_state), started_with, _state };
+            }
+
+        };
+        
+
+        class basic_state_diagram : public state_diagram
+        {
+            
+        public:
+
+            virtual result_t lock_op  (constant_t op,
+                                       state_t    started_with,
+                                       flags_t    flags) const override
+            {
+                guarantee_t guarantee = guarantee_t::acquire;
+
+                switch (op)
+                {
+                case ops::open:
+                    if ((started_with | (states::opening | states::open |
+                                         states::closing | states::closed)))
+                    {
+                        break;
+                    }
+                    return result_t{ true, started_with + states::opening, guarantee };
+                case ops::close:
+                    if ((started_with | (states::opening | states::closing | states::closed))
+                        || !(started_with & (states::operable_state(flags) | states::open)))
+                    {
+                        break;
+                    }
+                    return result_t{ true, started_with - states::open + states::closing, guarantee };
+                case ops::read:
+                    if (!(started_with & (states::open | states::readable)))
+                    {
+                        break;
+                    }
+                    return result_t{ true, started_with - states::readable, guarantee };
+                case ops::write:
+                    if (!(started_with & (states::open | states::writable)))
+                    {
+                        break;
+                    }
+                    return result_t{ true, started_with - states::writable, guarantee };
+                default:
+                    break;
+                }
+                return result_t{ false, started_with, guarantee };
+            }
+
+            virtual result_t unlock_op(constant_t       op,
+                                       state_t          started_with,
+                                       state_t          locked_with,
+                                       flags_t          flags,
+                                       ops::result_type op_result) const override
+            {
+                guarantee_t guarantee = guarantee_t::release;
+                if (op_result == ops::result_type::guarantee)
+                {
+                    return result_t{ true, started_with, guarantee };
+                }
+                
+                switch (op)
+                {
+                case ops::open:
+                    if (!(started_with & states::opening))
+                    {
+                        break;
+                    }
+                    if (op_result == ops::result_type::result_success)
+                    {
+                        return result_t{ true, ((started_with - states::opening)
+                                                 + (states::open | states::operable_state(flags))), guarantee };
+                    }
+                    return result_t{ true, started_with - states::opening, guarantee };
+                case ops::close:
+                    if (!(started_with & states::closing))
+                    {
+                        break;
+                    }
+                    return result_t{ true, (started_with - states::closing) + states::closed, guarantee };
+                case ops::read:
+                    if (!(started_with & states::open) || (started_with & states::readable))
+                    {
+                        break;
+                    }
+                    return result_t{ true, started_with + states::readable, guarantee };
+                case ops::write:
+                    if (!(started_with & states::open) || (started_with & states::writable))
+                    {
+                        break;
+                    }
+                    return result_t{ true, started_with + states::writable, guarantee };
+                default:
+                    break;
+                }
+                return result_t{ false, started_with, guarantee };
+            }
+        };
+
+
     }
 }
