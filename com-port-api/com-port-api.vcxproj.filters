@@ -45,6 +45,9 @@
     <ClInclude Include="include\byte_buffer.h">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="include\channel.h">
+      <Filter>include</Filter>
+    </ClInclude>
     <ClInclude Include="include\bit_field.h">
       <Filter>include</Filter>
     </ClInclude>
