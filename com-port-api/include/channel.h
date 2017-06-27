@@ -4,6 +4,9 @@
 
 #include <string>
 #include <exception>
+#include <atomic>
+#include <mutex>
+#include <condition_variable>
 #include <functional>
 
 #include <byte_buffer.h>
@@ -310,6 +313,135 @@ namespace com_port_api
             virtual result_t close(success_handler_t success_cb,
                                    error_handler_t   failure_cb) { throw error::channel_error("unsupported"); };
 
+
+        protected:
+
+
+            virtual result_t do_as(constant_t op,
+                                   std::function < void () > fn)
+            {
+                state_machine_t::result_t state_transition_result =
+                    _machine.lock_op(_diagram, op);
+
+                state_t locked_with = std::get<1>(state_transition_result);
+
+                if (!std::get<0>(state_transition_result))
+                {
+                    return result_t{ false, locked_with, locked_with };
+                }
+
+                try
+                {
+                    fn();
+
+                    state_transition_result =
+                        _machine.unlock_op(_diagram,
+                                           op,
+                                           locked_with,
+                                           ops::result_type::result_success);
+
+                    assert(std::get<0>(state_transition_result));
+
+                    return result_t{ true, locked_with, std::get<2>(state_transition_result) };
+                }
+                catch (...)
+                {
+                    state_transition_result =
+                        _machine.unlock_op(_diagram,
+                                           op,
+                                           locked_with,
+                                           ops::result_type::result_failure);
+
+                    assert(std::get<0>(state_transition_result));
+
+                    throw;
+                }
+            }
+
+            virtual result_t do_as(constant_t op,
+                                   std::function < void (success_handler_t,
+                                                         error_handler_t) > fn,
+                                   success_handler_t success_cb,
+                                   error_handler_t   failure_cb)
+            {
+                state_machine_t::result_t state_transition_result =
+                    _machine.lock_op(_diagram, op);
+
+                state_t locked_with = std::get<1>(state_transition_result);
+                state_t transition_result = std::get<2>(state_transition_result);
+
+                if (!std::get<0>(state_transition_result))
+                {
+                    return result_t{ false, locked_with, locked_with };
+                }
+
+                success_handler_t _success_cb = [=, this] ()
+                {
+                    state_machine_t::result_t _state_transition_result =
+                    _machine.unlock_op(_diagram,
+                                       op,
+                                       locked_with,
+                                       ops::result_type::result_success);
+
+                    assert(std::get<0>(_state_transition_result));
+
+                    success_cb();
+                };
+
+                error_handler_t _failure_cb = [=, this] (const error::channel_error &err)
+                {
+                    state_machine_t::result_t _state_transition_result =
+                    _machine.unlock_op(_diagram,
+                                       op,
+                                       locked_with,
+                                       ops::result_type::result_failure);
+
+                    assert(std::get<0>(_state_transition_result));
+
+                    failure_cb(err);
+                };
+
+                try
+                {
+                    fn(_success_cb, _failure_cb);
+                }
+                catch (const error::channel_error &err)
+                {
+                    state_transition_result =
+                        _machine.unlock_op(_diagram,
+                                           op,
+                                           locked_with,
+                                           ops::result_type::result_failure);
+
+                    assert(std::get<0>(state_transition_result));
+
+                    failure_cb(err);
+
+                    return result_t{ true, locked_with, transition_result };
+                }
+                catch (...)
+                {
+                    state_transition_result =
+                        _machine.unlock_op(_diagram,
+                                           op,
+                                           locked_with,
+                                           ops::result_type::result_failure);
+
+                    assert(std::get<0>(state_transition_result));
+
+                    throw;
+                }
+                
+                state_transition_result =
+                    _machine.unlock_op(_diagram,
+                                       op,
+                                       locked_with,
+                                       ops::result_type::guarantee);
+
+                assert(std::get<0>(state_transition_result));
+
+                return result_t{ true, locked_with, transition_result };
+            }
         };
 
     }
