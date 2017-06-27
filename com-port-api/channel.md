@@ -196,3 +196,97 @@ The operation blocks current thread until one of the following conditions is met
 4. `signal` operation is called
 
 In all cases except (1) the operation returns `false`.
+
+
+
+# Implementation details
+
+
+## `state_diagram` class
+
+The class is a base class responsible for state transition calculation.
+
+It contains two main mathods: `lock_op` and `unlock_op`. The first one calculates a state which is to be set for the channel after a certain operation starts. The last one calculates a state which is to be set for the channel after a certaint operation ends with a certain result (success or failure).
+
+The default implmenetation, `basic_state_diagram`, for channel that implements `open-read-write-close` operations implements the following state diagrams according to above requirements:
+
+`lock_op` diagram
+
+| main state | modifiers | operation | flags | conditions      | result         |
+|:----------:|:---------:|:---------:|:-----:|:---------------:|:--------------:|
+|none        |X          |open       |X      |X                |opening         |
+|none        |X          |X          |X      |X                |[not permitted] |
+|opening     |X          |X          |X      |X                |[not permitted] |
+|open        |r [w]      |read       |X      |X                |open [w]        |
+|open        |[r] w      |write      |X      |X                |open [r]        |
+|open        |[r] [w]    |close      |[R] [W]|(r\|!R)&(w\|!W)  |closing [r] [w] |
+|open        |X          |X          |X      |X                |[not permitted] |
+|closing     |X          |X          |X      |X                |[not permitted] |
+|closed      |X          |X          |X      |X                |[not permitted] |
+|X           |X          |X          |X      |X                |[not permitted] |
+
+`unlock_op` diagram
+
+| main state | modifiers | operation | flags | conditions      | result         |
+|:----------:|:---------:|:---------:|:-----:|:---------------:|:--------------:|
+|none        |X          |X          |X      |X                |[not permitted] |
+|opening     |X          |open       |[R] [W]|success          |open r=R w=W    |
+|opening     |X          |open       |X      |failure          |none            |
+|opening     |X          |X          |X      |X                |[not permitted] |
+|open        |[w]        |read       |X      |X                |open r [w]      |
+|open        |[r]        |write      |X      |X                |open [r] w      |
+|open        |X          |X          |X      |X                |[not permitted] |
+|closing     |[r] [w]    |close      |X      |X                |closed [r] [w]  |
+|closing     |X          |X          |X      |X                |[not permitted] |
+|closed      |X          |X          |X      |X                |[not permitted] |
+|X           |X          |X          |X      |X                |[not permitted] |
+
+With `guarantee` result type the default implementation always returns `true` for any state transitions providing `release` guarantee type.
+
+In default implementation all permitted state transitions require at least `acquire` (for `lock_op`) and at least `release` (for `unlock_op`) guarantee. `unlock_op` operation relies only on `started_with` state.
+
+Listed tables above are a bit ideal. Default implementation _preserves_ all unknown state bits, so any additional bits may be used.
+
+
+## `state_machine` class
+
+The class holds `state` and actually performs state transitions calculated by `state_diagram`.
+
+The default implementation contains two `state_machine`s:
+
+1. `atomic_state_machine` uses `std::atomic` to interoperate with state. Does not support wait mechanism, but supports different guarantee levels by choosing an appropriate `std::memory_order` for the specific operations.
+2. `blocking_state_machine` is implemented using `std::mutex` and `std::condition_variable`. Implements `acq_rel` guarantee only. Allows to wait for an appropriate state using `wait` operation semantics, described above.
+
+
+## `channel_base` class
+
+The class is a base for all channels.
+
+Provides a generic `do_as` operation that allows to perform the given function as any operation that is known by the particular `state_diagram`, specified at channel creation time, e.g. as `open` or `close`.
+
+Default implementation has blocking and non-blocking variants of `do_as`.
+
+Let "`do_` operation" be any operation started with `do_as` operation, "`do_xxx` operation" -- `xxx` operation started with `do_as` operation.
+
+`do_` operations may throw any exceptions. They are handled by `do_as` operation to ensure correct state transitions. In case of blocking `do_as` exception is just rethrown. Non-blocking variant of `do_as` passes all `channel_error` exceptions to the corresponding handler, but rethrows exceptions of other types.
+
+Non-blocking `do_` operations shouldn't worry about state transitions at all since all necessary "external work" is passed to them in the corresponding callback. They just need to ensure the callback is executed correctly and in a proper time.
+
+Since parallel execution of `open`, `close` and `read`/`write` operations is not permitted, and only one operation of same type may be executing in a certain moment of time, due to the use of guarantee types there is a number of guarantees and assumptions for `do_` operations in default implementation:
+
+1. `do_open`, `do_close` and `do_read`/`do_write` cannot be executing simultaneously
+2. `do_read` and `do_write` can be executing simultaneously
+3. All modifications in memory performed by `do_open` are visible in all `do_` operations
+4. All modifications in memory performed by `do_close` are visible in all `do_` operations
+5. All modifications in memory performed by `do_read` are visible in `do_open`, `do_close` and next `do_read` operations and might not be visible in `do_write`
+6. All modifications in memory performed by `do_write` are visible in `do_open`, `do_close` and next `do_write` operations and might not be visible in `do_read`
+7. All modifications in memory performed before `do_open` are visible in `do_open`
+
+Pay attention to (5) and (6).
+
+Due to these guarantees all per-operation internal variables used by `do_` operations may be accessed without any extra synchronization. All per-implementation internal variables (used across multiple `do_` operations) may also be accessed without any extra synchronization if and only if the variables are not modified by `do_read` and read by `do_write` (and vice versa) or modified by both `do_read` and `do_write`.
+
+Note, that to provide (7), it is required to execute `provide_guarantee` with at least `release` guarantee type on the underlying state machine.
+
+Note, that implementations must close the channel in proper way before its destruction. It is quite recommended to call `close` in a loop in the destructor of implementing class.
+
