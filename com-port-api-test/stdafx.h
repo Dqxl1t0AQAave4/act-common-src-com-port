@@ -6,7 +6,7 @@
 #pragma once
 
 #include "targetver.h"
-
+#include <afxwin.h>
 // Headers for CppUnitTest
 #include "CppUnitTest.h"
 

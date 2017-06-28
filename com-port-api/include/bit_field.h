@@ -1,5 +1,7 @@
 #pragma once
 
+#include <type_traits>
+
 namespace com_port_api
 {
 

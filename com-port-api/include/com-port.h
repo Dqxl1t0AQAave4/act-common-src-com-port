@@ -2,6 +2,7 @@
 
 #include <afxwin.h>
 
+#include <com-port-api/include/byte_buffer.h>
 #include <logger-simple-api/include/logger.h>
 
 namespace com_port_api

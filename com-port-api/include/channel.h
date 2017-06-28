@@ -8,6 +8,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <functional>
+#include <type_traits>
 
 #include <com-port-api/include/byte_buffer.h>
 #include <com-port-api/include/bit_field.h>
