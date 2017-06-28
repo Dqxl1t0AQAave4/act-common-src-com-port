@@ -3,7 +3,7 @@
 #include <exception>
 #include <string>
 
-#include <byte_buffer.h>
+#include <com-port-api/include/byte_buffer.h>
 
 namespace com_port_api
 {

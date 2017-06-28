@@ -13,10 +13,10 @@
 #include <cassert>
 #include <memory>
 
-#include <byte_buffer.h>
-#include <com-port.h>
-#include <dialect.h>
-#include <logger.h>
+#include <com-port-api/include/byte_buffer.h>
+#include <com-port-api/include/com-port.h>
+#include <com-port-api/include/dialect.h>
+#include <logger-simple-api/include/logger.h>
 
 namespace com_port_api
 {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <reactor.h>
+#include <com-port-api/include/reactor.h>
 #include <thread>
 
 namespace {

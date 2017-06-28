@@ -4,8 +4,8 @@
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
-#include <byte_buffer.h>
-#include <channel.h>
+#include <com-port-api/include/byte_buffer.h>
+#include <com-port-api/include/channel.h>
 #include <iostream>
 #include <future>
 #include <thread>

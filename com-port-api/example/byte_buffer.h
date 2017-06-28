@@ -1,6 +1,6 @@
 #pragma once
 
-#include <byte_buffer.h>
+#include <com-port-api/include/byte_buffer.h>
 #include <iostream>
 #include <thread>
 

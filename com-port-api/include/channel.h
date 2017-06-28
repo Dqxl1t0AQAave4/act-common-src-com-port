@@ -9,8 +9,8 @@
 #include <condition_variable>
 #include <functional>
 
-#include <byte_buffer.h>
-#include <bit_field.h>
+#include <com-port-api/include/byte_buffer.h>
+#include <com-port-api/include/bit_field.h>
 
 namespace com_port_api
 {

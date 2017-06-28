@@ -2,7 +2,7 @@
 
 using namespace Microsoft::VisualStudio::CppUnitTestFramework;
 
-#include <channel.h>
+#include <com-port-api/include/channel.h>
 #include <iostream>
 
 using namespace com_port_api;

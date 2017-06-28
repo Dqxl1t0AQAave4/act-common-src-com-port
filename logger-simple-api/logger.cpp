@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-#include <logger.h>
+#include <logger-simple-api/include/logger.h>
 
 #include <mutex>
 
