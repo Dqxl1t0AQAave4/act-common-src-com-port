@@ -153,9 +153,7 @@ namespace com_port_api
         public:
 
 
-            virtual ~state_diagram()
-            {
-            }
+            virtual ~state_diagram() = default;
 
 
             virtual result_t lock_op  (constant_t op,
@@ -188,9 +186,7 @@ namespace com_port_api
 
         public:
 
-            virtual ~state_machine()
-            {
-            }
+            virtual ~state_machine() = default;
             
 
             virtual state_t state() const = 0;
@@ -274,9 +270,7 @@ namespace com_port_api
             {
             }
 
-            virtual ~channel_base()
-            {
-            }
+            virtual ~channel_base() = default;
 
 
         public:
