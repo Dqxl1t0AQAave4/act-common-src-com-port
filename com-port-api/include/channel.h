@@ -9,6 +9,7 @@
 #include <condition_variable>
 #include <functional>
 #include <type_traits>
+#include <memory>
 
 #include <com-port-api/include/byte_buffer.h>
 #include <com-port-api/include/bit_field.h>
@@ -229,18 +230,11 @@ namespace com_port_api
         using result_handler_t  = std::function < void (byte_buffer &) > ;
 
 
-        template <class SD, class SM,
-                  typename = std::enable_if_t<std::is_base_of<typename state_diagram, SD>::value
-                                           && std::is_base_of<typename state_machine, SM>::value>>
         class channel_base
         {
 
 
         public:
-
-
-            using state_diagram_t = SD;
-            using state_machine_t = SM;
             
             /**
              *	std::get<0> -> success/failure
@@ -253,21 +247,23 @@ namespace com_port_api
         protected:
 
 
-            state_diagram_t _diagram;
-            state_machine_t _machine;
+            std::unique_ptr<state_diagram> _diagram;
+            std::unique_ptr<state_machine> _machine;
 
 
         public:
 
 
-            channel_base(const state_diagram_t &diagram,
-                         const state_machine_t &machine)
-                         : _diagram(diagram), _machine(machine)
+            channel_base(std::unique_ptr<state_diagram> && diagram,
+                         std::unique_ptr<state_machine> && machine)
+                         : _diagram(std::move(diagram)), _machine(std::move(machine))
             {
             }
 
             channel_base()
             {
+                // allow implementation to decide what diagram
+                // to use in more flexible way
             }
 
             virtual ~channel_base() = default;
@@ -275,14 +271,14 @@ namespace com_port_api
 
         public:
 
-            const state_diagram_t & get_state_diagram()
+            const state_diagram & get_state_diagram()
             {
-                return _diagram;
+                return *_diagram;
             }
 
-            const state_machine_t & get_state_machine()
+            const state_machine & get_state_machine()
             {
-                return _machine;
+                return *_machine;
             }
 
         public:
@@ -315,8 +311,8 @@ namespace com_port_api
             virtual result_t do_as(constant_t op,
                                    std::function < void () > fn)
             {
-                state_machine_t::result_t state_transition_result =
-                    _machine.lock_op(_diagram, op);
+                state_machine::result_t state_transition_result =
+                    _machine->lock_op(*_diagram, op);
 
                 state_t locked_with = std::get<1>(state_transition_result);
 
@@ -330,7 +326,7 @@ namespace com_port_api
                     fn();
 
                     state_transition_result =
-                        _machine.unlock_op(_diagram,
+                        _machine->unlock_op(*_diagram,
                                            op,
                                            locked_with,
                                            ops::result_type::result_success);
@@ -342,7 +338,7 @@ namespace com_port_api
                 catch (...)
                 {
                     state_transition_result =
-                        _machine.unlock_op(_diagram,
+                        _machine->unlock_op(*_diagram,
                                            op,
                                            locked_with,
                                            ops::result_type::result_failure);
@@ -359,8 +355,8 @@ namespace com_port_api
                                    success_handler_t success_cb,
                                    error_handler_t   failure_cb)
             {
-                state_machine_t::result_t state_transition_result =
-                    _machine.lock_op(_diagram, op);
+                state_machine::result_t state_transition_result =
+                    _machine->lock_op(*_diagram, op);
 
                 state_t locked_with = std::get<1>(state_transition_result);
                 state_t transition_result = std::get<2>(state_transition_result);
@@ -370,10 +366,10 @@ namespace com_port_api
                     return result_t{ false, locked_with, locked_with };
                 }
 
-                success_handler_t _success_cb = [=, this] ()
+                success_handler_t _success_cb = [=] ()
                 {
-                    state_machine_t::result_t _state_transition_result =
-                    _machine.unlock_op(_diagram,
+                    state_machine::result_t _state_transition_result =
+                    _machine->unlock_op(*_diagram,
                                        op,
                                        locked_with,
                                        ops::result_type::result_success);
@@ -383,10 +379,10 @@ namespace com_port_api
                     success_cb();
                 };
 
-                error_handler_t _failure_cb = [=, this] (const error::channel_error &err)
+                error_handler_t _failure_cb = [=] (const error::channel_error &err)
                 {
-                    state_machine_t::result_t _state_transition_result =
-                    _machine.unlock_op(_diagram,
+                    state_machine::result_t _state_transition_result =
+                    _machine->unlock_op(*_diagram,
                                        op,
                                        locked_with,
                                        ops::result_type::result_failure);
@@ -403,7 +399,7 @@ namespace com_port_api
                 catch (const error::channel_error &err)
                 {
                     state_transition_result =
-                        _machine.unlock_op(_diagram,
+                        _machine->unlock_op(*_diagram,
                                            op,
                                            locked_with,
                                            ops::result_type::result_failure);
@@ -417,7 +413,7 @@ namespace com_port_api
                 catch (...)
                 {
                     state_transition_result =
-                        _machine.unlock_op(_diagram,
+                        _machine->unlock_op(*_diagram,
                                            op,
                                            locked_with,
                                            ops::result_type::result_failure);
@@ -428,7 +424,7 @@ namespace com_port_api
                 }
                 
                 state_transition_result =
-                    _machine.unlock_op(_diagram,
+                    _machine->unlock_op(*_diagram,
                                        op,
                                        locked_with,
                                        ops::result_type::guarantee);
