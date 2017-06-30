@@ -16,28 +16,27 @@ using namespace com_port_api::channel;
 namespace com_port_api_test
 {
 
-    using testing_channel_base = channel_base < basic_state_diagram, atomic_state_machine > ;
-    
-
     enum : constant_t
     {
         initial = (1 << 8)
     };
 
-    class test_channel_base : public testing_channel_base
+    class test_channel_base : public channel_base
     {
     public:
 
         test_channel_base()
+            : channel_base(std::make_unique<basic_state_diagram>(),
+                           std::make_unique<atomic_state_machine>())
         {
-            _machine.set_flags(flags::readable | flags::writable);
-            _machine.set_state(states::none, initial);
+            _machine->set_flags(flags::readable | flags::writable);
+            _machine->set_state(states::none, initial);
         }
 
         virtual result_t do_as(constant_t op,
                                std::function < void () > fn) override
         {
-            return testing_channel_base::do_as(op, fn);
+            return channel_base::do_as(op, fn);
         }
         virtual result_t do_as(constant_t op,
                                std::function < void (success_handler_t,
@@ -45,12 +44,12 @@ namespace com_port_api_test
                                success_handler_t success_cb,
                                error_handler_t   failure_cb) override
         {
-            return testing_channel_base::do_as(op, fn, success_cb, failure_cb);
+            return channel_base::do_as(op, fn, success_cb, failure_cb);
         }
 
-        state_machine_t & machine()
+        state_machine & machine()
         {
-            return _machine;
+            return *_machine;
         }
     };
 
