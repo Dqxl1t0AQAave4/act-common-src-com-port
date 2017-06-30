@@ -205,10 +205,10 @@ namespace com_port_api
             virtual void set_flags(flags_t desired) = 0;
 
 
-            virtual result_t lock_op  (state_diagram &d,
+            virtual result_t lock_op  (const state_diagram &d,
                                        constant_t    op) = 0;
 
-            virtual result_t unlock_op(state_diagram    &d,
+            virtual result_t unlock_op(const state_diagram    &d,
                                        constant_t       op,
                                        state_t          locked_with,
                                        ops::result_type op_result) = 0;
@@ -494,7 +494,7 @@ namespace com_port_api
             }
 
 
-            virtual result_t lock_op  (state_diagram &d,
+            virtual result_t lock_op  (const state_diagram &d,
                                        constant_t    op) override
             {
                 result_t r;
@@ -520,7 +520,7 @@ namespace com_port_api
                 return r;
             }
 
-            virtual result_t unlock_op(state_diagram    &d,
+            virtual result_t unlock_op(const state_diagram    &d,
                                        constant_t       op,
                                        state_t          locked_with,
                                        ops::result_type op_result) override
@@ -634,7 +634,7 @@ namespace com_port_api
             }
 
 
-            virtual result_t lock_op  (state_diagram &d,
+            virtual result_t lock_op  (const state_diagram &d,
                                        constant_t    op) override
             {
                 flags_t current_flags = flags();
@@ -657,7 +657,7 @@ namespace com_port_api
                 return result_t{ true, current_state, std::get<1>(state_transition_result) };
             }
 
-            virtual result_t unlock_op(state_diagram    &d,
+            virtual result_t unlock_op(const state_diagram    &d,
                                        constant_t       op,
                                        state_t          locked_with,
                                        ops::result_type op_result) override
