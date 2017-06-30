@@ -466,6 +466,8 @@ namespace com_port_api
                 _flags = other.flags();
             }
 
+            virtual ~atomic_state_machine() = default;
+
             virtual state_t state() const override
             {
                 return _state.load(std::memory_order_relaxed);
@@ -588,6 +590,8 @@ namespace com_port_api
                 _state = other.state();
                 _flags = other.flags();
             }
+
+            virtual ~blocking_state_machine() = default;
 
             virtual state_t state() const override
             {
@@ -836,6 +840,8 @@ namespace com_port_api
         {
             
         public:
+
+            virtual ~basic_state_diagram() = default;
 
             virtual result_t lock_op  (constant_t op,
                                        state_t    started_with,
