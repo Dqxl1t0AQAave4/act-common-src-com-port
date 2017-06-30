@@ -206,12 +206,12 @@ namespace com_port_api
 
 
             virtual result_t lock_op  (const state_diagram &d,
-                                       constant_t    op) = 0;
+                                       constant_t          op) = 0;
 
-            virtual result_t unlock_op(const state_diagram    &d,
-                                       constant_t       op,
-                                       state_t          locked_with,
-                                       ops::result_type op_result) = 0;
+            virtual result_t unlock_op(const state_diagram &d,
+                                       constant_t          op,
+                                       state_t             locked_with,
+                                       ops::result_type    op_result) = 0;
 
 
             virtual void provide_guarantee(guarantee_t guarantee = guarantee_t::acq_rel)
@@ -520,10 +520,10 @@ namespace com_port_api
                 return r;
             }
 
-            virtual result_t unlock_op(const state_diagram    &d,
-                                       constant_t       op,
-                                       state_t          locked_with,
-                                       ops::result_type op_result) override
+            virtual result_t unlock_op(const state_diagram &d,
+                                       constant_t          op,
+                                       state_t             locked_with,
+                                       ops::result_type    op_result) override
             {
                 result_t r;
 
@@ -635,7 +635,7 @@ namespace com_port_api
 
 
             virtual result_t lock_op  (const state_diagram &d,
-                                       constant_t    op) override
+                                       constant_t          op) override
             {
                 flags_t current_flags = flags();
                 state_t current_state;
@@ -657,10 +657,10 @@ namespace com_port_api
                 return result_t{ true, current_state, std::get<1>(state_transition_result) };
             }
 
-            virtual result_t unlock_op(const state_diagram    &d,
-                                       constant_t       op,
-                                       state_t          locked_with,
-                                       ops::result_type op_result) override
+            virtual result_t unlock_op(const state_diagram &d,
+                                       constant_t          op,
+                                       state_t             locked_with,
+                                       ops::result_type    op_result) override
             {
                 flags_t current_flags = flags();
                 state_t current_state;
