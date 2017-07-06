@@ -88,6 +88,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="channel_base_test.cpp" />
+    <ClCompile Include="basic_channel_pool_test.cpp" />
     <ClCompile Include="memory_consistency_test.cpp" />
     <ClCompile Include="basic_state_diagram_test.cpp" />
     <ClCompile Include="state_machine_test.cpp" />

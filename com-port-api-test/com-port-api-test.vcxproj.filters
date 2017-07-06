@@ -35,10 +35,13 @@
     <ClCompile Include="state_machine_test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="memory_consistency_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="channel_base_test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="memory_consistency_test.cpp">
+    <ClCompile Include="basic_channel_pool_test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
