@@ -87,6 +87,7 @@
     <ClInclude Include="util.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="blocking_list_buffer_test.cpp" />
     <ClCompile Include="channel_base_test.cpp" />
     <ClCompile Include="basic_channel_pool_test.cpp" />
     <ClCompile Include="memory_consistency_test.cpp" />

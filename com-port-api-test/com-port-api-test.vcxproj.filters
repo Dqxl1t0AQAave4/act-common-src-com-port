@@ -44,5 +44,8 @@
     <ClCompile Include="basic_channel_pool_test.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="blocking_list_buffer_test.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>
