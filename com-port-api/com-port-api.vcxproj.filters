@@ -54,6 +54,9 @@
     <ClInclude Include="include\channel_pool.h">
       <Filter>include</Filter>
     </ClInclude>
+    <ClInclude Include="include\blocking_list_buffer.h">
+      <Filter>include</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
