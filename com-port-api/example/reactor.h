@@ -9,19 +9,12 @@ namespace example
 
     using namespace com_port_api;
 
-    using dialect_t = dialect < char, char > ;
-    using reactor_t = reactor < char, char > ;
-
-    class custom_dialect : public dialect_t
+    class custom_dialect : public dialect < char, char >
     {
 
     public:
-        
-        custom_dialect() : dialect_t(1, 1)
-        {
-        }
 
-        virtual bool read(ipacket_t &dst, byte_buffer &src)
+        bool read(char &dst, byte_buffer &src)
         {
             char c;
             if (src.get(c))
@@ -32,7 +25,7 @@ namespace example
             return false;
         }
 
-        virtual bool write(byte_buffer &dst, const opacket_t &src)
+        bool write(byte_buffer &dst, const char &src)
         {
             char c = src;
             if (dst.put(&c, 1) == 0)
@@ -43,13 +36,12 @@ namespace example
         }
     };
 
+    using reactor_t = reactor < custom_dialect > ;
+
     void reactor_example_setup()
     {
-        // creating custom dialect pointer
-        reactor_t::dialect_ptr d = std::make_unique<custom_dialect>();
-
         // creating and starting reactor with default parameters
-        reactor_t r(std::move(d));
+        reactor_t r;
         r.start();
 
         // opening port is required since reactor
