@@ -68,7 +68,7 @@ namespace example
         // wait for new packets
         std::this_thread::sleep_for(std::chrono::seconds(1));
 
-        std::vector<reactor_t::ipacket_t> packets;
+        std::list<reactor_t::ipacket_t> packets;
         {
             // lock on the iqueue_mutex to be sure
             // that no concurrent updates will be performed
@@ -76,11 +76,8 @@ namespace example
             reactor_t::guard_t guard(r.iqueue_mutex);
 
             // read all the pending packets
-            packets.insert(packets.end(),
-                           r.iqueue.begin(), r.iqueue.end());
-
             // clear the iqueue!!!
-            r.iqueue.clear();
+            packets.splice(packets.end(), r.iqueue);
         }
 
         // stop the reactor and wait for its actual termination
