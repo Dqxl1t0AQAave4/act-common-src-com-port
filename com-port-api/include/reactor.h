@@ -98,7 +98,7 @@ protected:
      */
     std::size_t            ibuffer_size;
     std::size_t            obuffer_size;
-    std::vector<opacket_t> oqueue;
+    std::list<opacket_t>   oqueue;
     bool                   use_iqueue;
 
 
@@ -128,6 +128,10 @@ public:
 
     /**
      *	The public packet queue
+     *	
+     *	The queue may be weak-sized, i.e. its size
+     *	will not grow if the current size is greater
+     *	or equals `iqueue_length`
      *	
      *	Turning off `use_iqueue` variable
      *	does not affect `iqueue_length` value
@@ -422,7 +426,7 @@ protected:
 
     virtual void loop() override
     {
-        std::vector<ipacket_t> ipacket_buffer;
+        std::list<ipacket_t>   ipacket_buffer;
         std::list<opacket_t>   opacket_buffer;
 
         bool use_iqueue; // local, overlaps
@@ -470,14 +474,14 @@ protected:
             
                 if (use_iqueue)
                 {
-                    std::size_t can_put = min(iqueue_length - iqueue.size(), ipacket_buffer.size());
-                    iqueue.insert(iqueue.end(),
-                                  ipacket_buffer.begin(), ipacket_buffer.begin() + can_put);
-                    ipacket_buffer.clear();
+                    // use weak-sized `iqueue`
+                    if (iqueue.size() < iqueue_length)
+                    {
+                        iqueue.splice(iqueue.end(), ipacket_buffer);
+                    }
                 }
             
-                opacket_buffer.insert(opacket_buffer.end(), oqueue.begin(), oqueue.end());
-                oqueue.clear();
+                opacket_buffer.splice(opacket_buffer.end(), oqueue);
             }
 
             // send local buffer to the port
