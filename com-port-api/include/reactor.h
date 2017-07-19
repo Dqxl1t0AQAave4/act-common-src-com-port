@@ -384,23 +384,39 @@ protected:
  *	
  *	The implementation relies on `dialect` class in
  *	packet encoding/decoding.
+ *	
+ *	The `dialect` must satisfy the following conditions:
+ *	
+ *	    - be default constructible
+ *	    - have definitions for `ipacket_t` and `opacket_t` types
+ *	    - implement `read` operation in the following way:
+ *	          - signature: bool read(ipacket_t &dst, byte_buffer &src)
+ *	          - return   : `true` on success / `false` otherwise
+ *	          - throw    : nothing
+ *	    - implement `write` operation in the following way:
+ *	          - signature: bool write(byte_buffer &dst, const opacket_t &src)
+ *	          - return   : `true` on success / `false` otherwise
+ *	          - throw    : nothing
+ *	
+ *	See `dialect.h`.
  */
-template<class I, class O> class reactor : public reactor_base<I, O>
+template<class D>
+class reactor
+    : public reactor_base < typename D::ipacket_t,
+                            typename D::opacket_t >
 {
 
 public:
 
-    using dialect_t = dialect < I, O > ;
-    using dialect_ptr = std::unique_ptr<dialect_t>;
+    using dialect_t = D;
 
 protected:
 
-    dialect_ptr processor;
+    dialect_t processor;
 
 public:
 
-    reactor(dialect_ptr processor,
-            std::size_t ibuffer_size  = 5000,
+    reactor(std::size_t ibuffer_size  = 5000,
             std::size_t obuffer_size  = 5000,
             std::size_t iqueue_length = 1000,
             bool        use_iqueue    = true)
@@ -419,6 +435,12 @@ public:
     {
         stop();
         join();
+    }
+
+
+    dialect_t & dialect()
+    {
+        return processor;
     }
 
 
@@ -454,7 +476,7 @@ protected:
             for(;;)
             {
                 ipacket_t packet;
-                if (!processor->read(packet, ibuffer))
+                if (!processor.read(packet, ibuffer))
                 {
                     break;
                 }
@@ -488,7 +510,7 @@ protected:
             while (!opacket_buffer.empty())
             {
                 opacket_t packet = opacket_buffer.front();
-                bool written = processor->write(obuffer, packet);
+                bool written = processor.write(obuffer, packet);
                 
                 // prepare buffer for reading
                 obuffer.flip();
