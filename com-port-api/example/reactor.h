@@ -1,6 +1,6 @@
 #pragma once
 
-#include <reactor.h>
+#include <act-common/reactor.h>
 #include <thread>
 
 namespace {

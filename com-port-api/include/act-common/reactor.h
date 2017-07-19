@@ -13,10 +13,10 @@
 #include <cassert>
 #include <memory>
 
-#include <byte_buffer.h>
-#include <com-port.h>
-#include <dialect.h>
-#include <logger.h>
+#include <act-common/byte_buffer.h>
+#include <act-common/com-port.h>
+#include <act-common/dialect.h>
+#include <act-common/logger.h>
 
 namespace com_port_api
 {

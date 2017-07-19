@@ -33,16 +33,16 @@
     <ClInclude Include="example\reactor.h">
       <Filter>example</Filter>
     </ClInclude>
-    <ClInclude Include="include\reactor.h">
+    <ClInclude Include="include\act-common\reactor.h">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="include\dialect.h">
+    <ClInclude Include="include\act-common\dialect.h">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="include\com-port.h">
+    <ClInclude Include="include\act-common\com-port.h">
       <Filter>include</Filter>
     </ClInclude>
-    <ClInclude Include="include\byte_buffer.h">
+    <ClInclude Include="include\act-common\byte_buffer.h">
       <Filter>include</Filter>
     </ClInclude>
   </ItemGroup>

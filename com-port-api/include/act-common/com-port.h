@@ -2,7 +2,7 @@
 
 #include <afxwin.h>
 
-#include <logger.h>
+#include <act-common/logger.h>
 
 namespace com_port_api
 {

@@ -77,10 +77,10 @@
   <ItemGroup>
     <ClInclude Include="example\byte_buffer.h" />
     <ClInclude Include="example\reactor.h" />
-    <ClInclude Include="include\byte_buffer.h" />
-    <ClInclude Include="include\com-port.h" />
-    <ClInclude Include="include\dialect.h" />
-    <ClInclude Include="include\reactor.h" />
+    <ClInclude Include="include\act-common\byte_buffer.h" />
+    <ClInclude Include="include\act-common\com-port.h" />
+    <ClInclude Include="include\act-common\dialect.h" />
+    <ClInclude Include="include\act-common\reactor.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
