@@ -1,4 +1,6 @@
-# com-port-api
+# `act-common` - `/src/com-port-api`
+
+Является частью проекта [`act-common`](https://github.com/Dqxl1t0AQAave4/act-common).
 
 Простейший API для работы с COM-портом в ОС Windows.
 
