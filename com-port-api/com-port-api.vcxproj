@@ -49,7 +49,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>include;..\logger-simple-api\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;..\lib\logger\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -65,7 +65,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>include;..\logger-simple-api\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>include;..\lib\logger\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -93,7 +93,7 @@
     <ClCompile Include="reactor.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\logger-simple-api\logger-simple-api.vcxproj">
+    <ProjectReference Include="..\lib\logger\logger-simple-api.vcxproj">
       <Project>{f51f8123-3c41-4bdb-a997-939a7dec5178}</Project>
     </ProjectReference>
   </ItemGroup>
