@@ -92,11 +92,6 @@
     </ClCompile>
     <ClCompile Include="reactor.cpp" />
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\lib\logger\logger-simple-api.vcxproj">
-      <Project>{f51f8123-3c41-4bdb-a997-939a7dec5178}</Project>
-    </ProjectReference>
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
