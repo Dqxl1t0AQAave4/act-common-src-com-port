@@ -2,7 +2,7 @@
 
 #include <afxwin.h>
 
-#include <act-common/logger.h>
+#include <act-common/logger_win.h>
 
 namespace com_port_api
 {
@@ -198,11 +198,11 @@ public:
         }
         if (!CloseHandle(comm))
         {
-            logger::log(_T("cannot close port [%s] handle"), comm_name);
+            logger::logs<logger::wlog>(L"cannot close port [%s] handle", comm_name);
             return false;
         }
         comm = INVALID_HANDLE_VALUE;
-        logger::log(_T("port [%s] closed"), comm_name);
+        logger::logs<logger::wlog>(L"port [%s] closed", comm_name);
         comm_name = "";
         return true;
     }
@@ -223,14 +223,14 @@ public:
     {
         if (!open())
         {
-            logger::log(_T("cannot read from closed port"));
+            logger::log<logger::wlog>(L"cannot read from closed port");
             return false;
         }
         DWORD bytes_read;
         if (!ReadFile(comm, dst.data(), dst.remaining(), &bytes_read, NULL))
         {
-            logger::log_system_error(GetLastError());
-            logger::log(_T("error while reading the data... closing port [%s]"), comm_name);
+            logger::logf<logger::wlog>(logger::sys_error{GetLastError()});
+            logger::logs<logger::wlog>(L"error while reading the data... closing port [%s]", comm_name);
             close();
             return false;
         }
@@ -251,14 +251,14 @@ public:
     {
         if (!open())
         {
-            logger::log(_T("cannot write to closed port"));
+            logger::log<logger::wlog>(L"cannot write to closed port");
             return false;
         }
         DWORD bytes_written;
         if (!WriteFile(comm, src.data(), src.remaining(), &bytes_written, NULL))
         {
-            logger::log_system_error(GetLastError());
-            logger::log(_T("error while writing the data... closing port [%s]"), comm_name);
+            logger::logf<logger::wlog>(logger::sys_error{GetLastError()});
+            logger::logs<logger::wlog>(L"error while writing the data... closing port [%s]", comm_name);
             close();
             return false;
         }
@@ -287,13 +287,13 @@ private:
             DWORD errorMessageID = GetLastError();
             if (errorMessageID == ERROR_FILE_NOT_FOUND)
             {
-                logger::log(_T("serial port [%s] does not exist"), options.name);
+                logger::logs<logger::wlog>(L"serial port [%s] does not exist", options.name);
             }
             else
             {
-                logger::log(_T("error occurred while opening [%s] port"), options.name);
+                logger::logs<logger::wlog>(L"error occurred while opening [%s] port", options.name);
             }
-            logger::log_system_error(errorMessageID);
+            logger::logf<logger::wlog>(logger::sys_error{errorMessageID});
             return false;
         }
 
@@ -309,10 +309,10 @@ private:
 
         if (!SetCommTimeouts(comm, &CommTimeOuts))
         {
-            logger::log_system_error(GetLastError());
+            logger::logf<logger::wlog>(logger::sys_error{GetLastError()});
             CloseHandle(comm);
             comm = INVALID_HANDLE_VALUE;
-            logger::log(_T("cannot setup port [%s] timeouts"), options.name);
+            logger::logs<logger::wlog>(L"cannot setup port [%s] timeouts", options.name);
             return false;
         }
 
@@ -350,14 +350,14 @@ private:
 
         if (!SetCommState(comm, &ComDCM))
         {
-            logger::log_system_error(GetLastError());
+            logger::logf<logger::wlog>(logger::sys_error{GetLastError()});
             CloseHandle(comm);
             comm = INVALID_HANDLE_VALUE;
-            logger::log(_T("cannot setup port [%s] configuration"), options.name);
+            logger::logs<logger::wlog>(L"cannot setup port [%s] configuration", options.name);
             return false;
         }
 
-        logger::log(_T("successfully connected to [%s] port"), options.name);
+        logger::logs<logger::wlog>(L"successfully connected to [%s] port", options.name);
 
         return true;
     }
